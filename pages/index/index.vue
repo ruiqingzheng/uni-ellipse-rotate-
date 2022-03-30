@@ -1,7 +1,14 @@
 <template>
   <view class="main">
     <view class="top">
-      <view class="stage">
+      <view
+        class="stage"
+        @click="
+          () => {
+            showModal()
+          }
+        "
+      >
         <image mode="scaleToFill" :src="items[active].image" />
       </view>
     </view>
@@ -39,6 +46,16 @@
         </view>
       </view>
     </view>
+
+    <view
+      class="modal-mask"
+      @click="closeModal()"
+      :style="!modalShow && { display: 'none' }"
+    >
+      <view class="modal-content">
+        {{ items[active].name }}
+      </view>
+    </view>
   </view>
 </template>
 
@@ -47,6 +64,7 @@ export default {
   data() {
     return {
       title: "Hello",
+      modalShow: false,
       active: 0,
       initPositions: [],
       items: [
@@ -130,7 +148,7 @@ export default {
     this.itemTouchStarted = false
     // 开始椭圆轮播动画
     // todo
-    // this.startAnimate()
+    this.startAnimate()
     // 滑动开始位置
     this.initTouch = { x: null, y: null }
     this.centerPoint = { x: null, y: null }
@@ -251,6 +269,8 @@ export default {
     // 开始动画
 
     startAnimate() {
+      // interval 存在, 动画已经在运行, 则退出
+      if (this.animateInterval) return
       this.animate(this.items.length, this.radiusLong, this.radiusShort)
     },
 
@@ -328,7 +348,8 @@ export default {
         )
         // let _angle = -dist * (180 / Math.PI)
         // console.log("dist", dist)
-        this.currentItemsRadian[i] += -dist
+        this.currentItemsRadian[i] =
+          (this.currentItemsRadian[i] - dist) % (2 * Math.PI)
       }
 
       // 根据角度改变来更新位置
@@ -347,6 +368,10 @@ export default {
         this.initPositions[i].y = Math.round(
           Math.sin(radian) * this.radiusShort
         )
+        // 手势移动位置后, 判断item是否是active
+        if (this.active !== i && this.isActive(this.initPositions[i])) {
+          this.active = i
+        }
       }
 
       console.log("this.currentItemsRadian:", this.currentItemsRadian)
@@ -357,7 +382,7 @@ export default {
     itemTouchend(e, item) {
       // console.log("itemTouchEnd", e, "item:", item)
       //todo
-      // this.startAnimate()
+      this.startAnimate()
       this.itemTouchStarted = false
     },
 
@@ -369,7 +394,7 @@ export default {
         : this.initRadian(count)
       // 移动弧长
       let move = Math.PI / 60
-      console.log("theta:", theta)
+      // console.log("theta:", theta)
 
       const that = this
 
@@ -387,11 +412,7 @@ export default {
               Math.sin(theta[i]) * _radiusShort
             )
             // 判断是否到达中间位置
-            if (
-              that.active !== i &&
-              that.initPositions[i].x - that.activePosition.x < 50 &&
-              that.initPositions[i].y - that.activePosition.y < 5
-            ) {
+            if (that.active !== i && that.isActive(that.initPositions[i])) {
               that.active = i
               // console.log("active:", that.active)
             }
@@ -403,9 +424,30 @@ export default {
       }
       _animate(radiusLong, radiusShort)
     },
+
+    // 根据传递的item position 判断是否到达active中间位置
+    isActive(itemPosition) {
+      return (
+        itemPosition.x - this.activePosition.x < 50 &&
+        itemPosition.y - this.activePosition.y < 5
+      )
+    },
+
     clear() {
       clearInterval(this.animateInterval)
       this.animateInterval = null
+    },
+
+    // 弹窗关闭
+    closeModal() {
+      this.modalShow = false
+      this.startAnimate()
+    },
+
+    // 打开弹窗
+    showModal() {
+      this.modalShow = true
+      this.stopAnimate()
     },
   },
 }
@@ -442,7 +484,7 @@ $yellow-300: #fde047;
   .top {
     height: 80%;
     width: 70%;
-    border: solid 1px red;
+    // border: solid 1px red;
     margin: 90px auto 10px;
     display: flex;
     justify-content: center;
@@ -463,21 +505,27 @@ $yellow-300: #fde047;
   .control {
     height: 70%;
     width: 100%;
-    border: solid 2px white;
+    // border: solid 2px white;
+    // overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: end;
     align-items: center;
+    position: relative;
+    // cut-half
+
     .ring {
       position: relative;
       width: 200px;
       height: 200px;
-      margin-bottom: -40px;
-      border: solid 3px $orange-100;
+      // 显示ring border  调整底部可见位置
+      // border: solid 3px $orange-100;
+      margin-bottom: -180px;
       border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
+
       .centerPoint {
         position: relative;
         width: 1px;
@@ -544,6 +592,30 @@ $yellow-300: #fde047;
           transition-property: width, height;
         }
       }
+    }
+  }
+  .modal-mask {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    z-index: 3;
+    background-color: rgba(0, 0, 0, 0.5);
+    .modal-content {
+      // position: absolute;
+      width: 600rpx;
+      height: 800rpx;
+      border-radius: 20rpx;
+      background-color: white;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
     }
   }
 }
