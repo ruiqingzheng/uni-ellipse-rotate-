@@ -2,27 +2,28 @@
   <view class="main">
     <view class="top">
       <view class="stage">
-        <image
-          mode="scaleToFill"
-          src="https://images.unsplash.com/photo-1614642264762-d0a3b8bf3700?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80"
-        />
+        <image mode="scaleToFill" :src="items[active].image" />
       </view>
     </view>
     <view class="control">
       <view class="ring">
-        <view class="centerPoint">
+        <view id="centerPoint" ref="centerPoint" class="centerPoint">
           <view
             v-for="(item, index) in items"
             :key="index"
             :class="[
               'item',
               active === index ? 'active' : '',
-              index === active - step ? 'leftBottom' : '',
+              leftBottomIndex === index ? 'leftBottom' : '',
+              rightBottomIndex === index ? 'rightBottom' : '',
             ]"
             :style="{
               left: `${initPositions[index].x}px`,
               top: `${initPositions[index].y}px`,
             }"
+            @touchstart="(e) => itemTouchstart(e, item)"
+            @touchmove="(e) => itemTouchmove(e, item)"
+            @touchend="(e) => itemTouchend(e, item)"
           >
             <image class="itemBackground" :src="item.image" />
             {{ item.name }}
@@ -101,6 +102,7 @@ export default {
     console.log("onUnload")
     this.clear()
   },
+  // 组件销毁前清理interval
   beforeDestroy: function () {
     console.log("beforeDestroy")
     this.clear()
@@ -109,10 +111,14 @@ export default {
     this.clear()
     // 顺时针 toRight , 逆时针  toLeft
     this.direction = "toRight"
+    // this.direction = "toLeft"
     // 椭圆大小
     this.radiusShort = 150
-    this.radiusLong = 300
+    this.radiusLong = 500
     this.duplicateItems()
+    // control items 的位置
+    // 用来存角度
+    this.currentItemsRadian = this.initRadian(this.items.length)
     this.initPositions = this.initEllipse(
       this.items.length,
       this.radiusLong,
@@ -120,26 +126,66 @@ export default {
     )
     this.activePosition = this.getActivePosition()
     console.log("activePosition: ", this.activePosition)
-    this.animate(this.items.length, this.radiusLong, this.radiusShort)
+    // control items 是否开始手势滑动
+    this.itemTouchStarted = false
+    // 开始椭圆轮播动画
+    // todo
+    // this.startAnimate()
+    // 滑动开始位置
+    this.initTouch = { x: null, y: null }
+    this.centerPoint = { x: null, y: null }
+  },
+
+  mounted() {
+    const query = uni.createSelectorQuery()
+    // 获取中心点的坐标
+    query
+      .select("#centerPoint")
+      .boundingClientRect((rect) => {
+        //rect是包含元素大小、位置等数据的对象
+        // console.log("center point rect:", rect)
+        this.centerPoint = {
+          x: rect.left,
+          y: rect.top,
+        }
+      })
+      .exec(() => {
+        //节点信息获取成功后执行的回调函数
+      })
   },
 
   computed: {
-    step() {
+    leftBottomIndex() {
       const _step = Math.floor(this.items.length / 4)
       const _leftBottomIndex = this.active - _step
       const leftBottomIndex =
         _leftBottomIndex < 0
           ? this.items.length - 2 + _leftBottomIndex
           : _leftBottomIndex
-      console.log(
-        "active:",
-        this.active,
-        "step",
-        _step,
-        "leftBottomIndex:",
-        leftBottomIndex
-      )
-      return _step
+      // console.log(
+      //   "active:",
+      //   this.active,
+      //   "step",
+      //   _step,
+      //   "leftBottomIndex:",
+      //   leftBottomIndex
+      // )
+      return leftBottomIndex
+    },
+
+    rightBottomIndex() {
+      const _step = Math.floor(this.items.length / 4)
+      const _rightBottomIndex = (this.active + _step + 1) % this.items.length
+
+      // console.log(
+      //   "active:",
+      //   this.active,
+      //   "step",
+      //   _step,
+      //   "_rightBottomIndex:",
+      //   _rightBottomIndex
+      // )
+      return _rightBottomIndex
     },
   },
   methods: {
@@ -162,7 +208,8 @@ export default {
     initEllipse(count, radiusLong, radiusShort) {
       let result = []
       let theta = this.initRadian(count)
-      console.log(theta)
+      this.currentItemsRadian = theta
+      console.log("initEllipse:", theta, this.currentItemsRadian)
 
       for (let i = 0; i < count; i++) {
         let x = Math.round(Math.cos(theta[i]) * radiusLong)
@@ -173,12 +220,12 @@ export default {
         })
       }
 
-      console.log(JSON.stringify(result))
+      // console.log(JSON.stringify(result))
 
       return result
     },
 
-    // todo: 判断左右, 根据左右位置进行screw变形
+    // todo: 判断左右, 根据左右位置进行screw变形?
     // 当active 确定的时候, 它的最边上的元素可以通过下标确定最远端元素,
     // 方向也是确定的, 就可以进行动画
 
@@ -188,15 +235,138 @@ export default {
       return index > this.active ? "right" : "left"
     },
 
+    // 获取中间active的位置
     getActivePosition() {
       const x = Math.cos(Math.PI / 2) * this.radiusLong
       const y = -Math.sin(Math.PI / 2) * this.radiusShort
       return { x, y }
     },
 
+    // 停止动画
+
+    stopAnimate() {
+      this.clear()
+    },
+
+    // 开始动画
+
+    startAnimate() {
+      this.animate(this.items.length, this.radiusLong, this.radiusShort)
+    },
+
+    // 滑动开始 , 初始化坐标
+    itemTouchstart(e, item) {
+      // console.log("itemTouchStart", e, "item:", item)
+      this.itemTouchStarted = true
+      this.initTouch = {
+        x: e.touches[0].pageX,
+        y: e.touches[0].pageY,
+      }
+    },
+
+    // 滑动中同样持续更新保存角度
+    itemTouchmove(e, item) {
+      // console.log("itemTouchMove", e, "item:", item)
+
+      // 错误处理, 初始位置等没有初始化都不进行改变操作直接退出
+      if (!this.itemTouchStarted) return
+      if (
+        !this.initTouch.x ||
+        !this.initTouch.y ||
+        !this.centerPoint.x ||
+        !this.centerPoint.y
+      ) {
+        console.warn("滑动事件获取初始坐标有误...")
+        return
+      }
+
+      const currentTouch = {
+        x: e.changedTouches[0].pageX,
+        y: e.changedTouches[0].pageY,
+      }
+
+      if (!this.currentItemsRadian || this.currentItemsRadian.length < 1) {
+        console.warn(
+          "滑动事件获取初始位置有误...",
+          this.initTouch,
+          this.currentItemsRadian
+        )
+      }
+
+      e.preventDefault()
+      // 滑动太短取消操作
+      if (
+        Math.abs(currentTouch.x - this.initTouch.x) < 2 ||
+        Math.abs(currentTouch.y - this.initTouch.y) < 2
+      ) {
+        console.log("滑动移动量太小, 取消处理...")
+        return
+      }
+      // 手势滑动, 先取消动画
+      this.stopAnimate()
+      // console.log(
+      //   "currentTouch:",
+      //   currentTouch,
+      //   "initTouch:",
+      //   this.initTouch,
+      //   "centerPoint:",
+      //   this.centerPoint,
+      //   "currentItemsRadian",
+      //   this.currentItemsRadian
+      // )
+      // 计算角度 , 需要更新所有item的角度
+      for (let i = 0; i < this.currentItemsRadian.length; i++) {
+        const dist = Math.atan2(
+          (this.centerPoint.x - currentTouch.x) *
+            (this.centerPoint.y - this.initTouch.y) -
+            (this.centerPoint.y - currentTouch.y) *
+              (this.centerPoint.x - this.initTouch.x),
+          (this.centerPoint.x - currentTouch.x) *
+            (this.centerPoint.x - this.initTouch.x) +
+            (this.centerPoint.y - currentTouch.y) *
+              (this.centerPoint.y - this.initTouch.y)
+        )
+        // let _angle = -dist * (180 / Math.PI)
+        // console.log("dist", dist)
+        this.currentItemsRadian[i] += -dist
+      }
+
+      // 根据角度改变来更新位置
+      this._onTouchMoveUpdateItemPosition()
+    },
+
+    _onTouchMoveUpdateItemPosition() {
+      if (!this.currentItemsRadian || this.currentItemsRadian.length < 0) {
+        return
+      }
+
+      for (let i = 0; i < this.currentItemsRadian.length; i++) {
+        const radian = this.currentItemsRadian[i]
+        console.log("radian:", radian)
+        this.initPositions[i].x = Math.round(Math.cos(radian) * this.radiusLong)
+        this.initPositions[i].y = Math.round(
+          Math.sin(radian) * this.radiusShort
+        )
+      }
+
+      console.log("this.currentItemsRadian:", this.currentItemsRadian)
+      console.log("this.initPositions :", this.initPositions)
+    },
+
+    // 滑动结束, 开始动画
+    itemTouchend(e, item) {
+      // console.log("itemTouchEnd", e, "item:", item)
+      //todo
+      // this.startAnimate()
+      this.itemTouchStarted = false
+    },
+
     // 动画
     animate(count, radiusLong, radiusShort) {
-      let theta = this.initRadian(count)
+      // 如果有上次的角度则继续上次的角度
+      let theta = this.currentItemsRadian
+        ? this.currentItemsRadian
+        : this.initRadian(count)
       // 移动弧长
       let move = Math.PI / 60
       console.log("theta:", theta)
@@ -223,9 +393,12 @@ export default {
               that.initPositions[i].y - that.activePosition.y < 5
             ) {
               that.active = i
-              console.log("active:", that.active)
+              // console.log("active:", that.active)
             }
           })
+
+          // 实时保留角度
+          that.currentItemsRadian = theta
         }, 150)
       }
       _animate(radiusLong, radiusShort)
@@ -253,7 +426,7 @@ $yellow-300: #fde047;
 .main {
   width: 100vw;
   height: 100vh;
-  // overflow: hidden;
+  overflow: hidden;
   display: grid;
   grid-auto-flow: column;
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -279,7 +452,7 @@ $yellow-300: #fde047;
       width: 400px;
       height: 200px;
       margin: 50px auto 10px;
-      border: dashed 3px $orange-100;
+      // border: dashed 3px $orange-100;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -359,6 +532,16 @@ $yellow-300: #fde047;
           transition-property: width, height;
           // transition-duration: 0.1s;
           // transform: scale(1.1);
+        }
+        .leftBottom {
+          width: 40px;
+          height: 40px;
+          transition-property: width, height;
+        }
+        .rightBottom {
+          width: 40px;
+          height: 40px;
+          transition-property: width, height;
         }
       }
     }
