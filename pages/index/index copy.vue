@@ -109,12 +109,12 @@ export default {
           image:
             "https://images.unsplash.com/photo-1503939313441-d753b6c7eb91?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
         },
-        // {
-        //   index: 6,
-        //   name: "item7",
-        //   image:
-        //     "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
-        // },
+        {
+          index: 6,
+          name: "item7",
+          image:
+            "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
+        },
         // { index: 7, name: 'item8', image: 'https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80' },
       ],
     }
@@ -127,7 +127,7 @@ export default {
   },
   // 组件销毁前清理interval
   beforeDestroy: function () {
-    // console.log("beforeDestroy")
+    console.log("beforeDestroy")
     this.clear()
   },
   created() {
@@ -148,34 +148,15 @@ export default {
       this.radiusShort
     )
     this.activePosition = this.getActivePosition()
-    // console.log("activePosition: ", this.activePosition)
+    console.log("activePosition: ", this.activePosition)
     // control items 是否开始手势滑动
     this.itemTouchStarted = false
-    // main touch 手势
-    this.mainTouchStarted = false
-    // main touch x 初始坐标, 只判断横移
-    this.mainTouchInitPos = 0
-    // main Touch x 移动了多少
-    this.mainTouchMovedX = 0
-    // 屏幕宽度
-    this.windowWidth = 0
-    // 滑动减速
-    this.slowTimes = 20
-    // 自转减速
-    this.slowTimesForAutoSpin = 100
-    // 是否自动动画
-    this.autoAnimate = false
-    // 是否暂停动画
-    this.paused = false
     // 开始椭圆轮播动画
     // todo
     this.startAnimate()
     // 滑动开始位置
     this.initTouch = { x: null, y: null }
     this.centerPoint = { x: null, y: null }
-
-    this.debouncedMainTouchMove = this.debounce(this.mainTouchmove, 500)
-    this.debouncedItemTouchMove = this.debounce(this.itemTouchmove, 500)
   },
 
   mounted() {
@@ -194,12 +175,6 @@ export default {
       .exec(() => {
         //节点信息获取成功后执行的回调函数
       })
-
-    uni.getSystemInfo({
-      success: (res) => {
-        this.windowWidth = res.windowWidth
-      },
-    })
   },
 
   computed: {
@@ -237,152 +212,15 @@ export default {
     },
   },
   methods: {
-    debounce(fn, delay) {
-      let timer = null //借助闭包
-      return function () {
-        if (timer) {
-          clearTimeout(timer) //进入该分支语句，说明当前正在一个计时过程中，并且又触发了相同事件。所以要取消当前的计时，重新开始计时
-          timer = setTimeout(fn, delay)
-        } else {
-          timer = setTimeout(fn, delay) // 进入该分支说明当前并没有在计时，那么就开始一个计时
-        }
-      }
-    },
-
     mainTouchstart(e) {
       console.log("mainTouchstart, ", e)
-      this.mainTouchInitPos = e.touches[0].clientX
     },
-
     mainTouchmove(e) {
       console.log("mainTouchmove", e)
-      const currentPosition = e.touches[0].clientX
-      console.log("currentPosition", currentPosition)
-
-      e.preventDefault()
-
-      // 滑动太少不处理
-      if (Math.abs(currentPosition - this.mainTouchInitPos) < 20) {
-        console.log("mainTouch滑动移动量太小, 取消处理...")
-        this.mainTouchStarted = false
-        return
-      }
-
-      // 如果item 也在滑动, 则也不处理
-
-      if (this.itemTouchStarted) {
-        console.log("mainTouch滑动移动 , itemTouch中,  取消mainTouch处理")
-        this.mainTouchStarted = false
-        return
-      }
-
-      this.mainTouchStarted = true
-      this.paused = true
-      // e.preventDefault()
-      if (this.mainTouchStarted) {
-        // 根据横移滑动计算角度
-        const touchMove = currentPosition - this.mainTouchInitPos
-        this.mainTouchMovedX = touchMove
-        let touchMoveRadian = (touchMove / this.windowWidth) * 2 * Math.PI
-        // console.log(
-        //   "currentPosition:",
-        //   currentPosition,
-        //   "mainTouchInitPos:",
-        //   this.mainTouchInitPos,
-        //   "this.windowWidth",
-        //   this.windowWidth,
-        //   "touchMove",
-        //   touchMove,
-        //   "touchMoveRadian:",
-        //   touchMoveRadian
-        // )
-
-        // todo: 角度更新方式
-        // const step = (2 * Math.PI) / this.items.length
-        // if (Math.abs(touchMoveRadian) > step) {
-        //   touchMoveRadian = touchMoveRadian > 0 ? step : -step
-        // }
-
-        touchMoveRadian = touchMoveRadian / this.slowTimes
-        for (let i = 0; i < this.currentItemsRadian.length; i++) {
-          this.currentItemsRadian[i] =
-            (this.currentItemsRadian[i] + touchMoveRadian) % (2 * Math.PI)
-        }
-      }
     },
     mainTouchend(e) {
-      this.paused = false
-      if (!this.mainTouchStarted) return
       console.log("mainTouchend", e)
-      this.fixedRadians()
-      this.mainTouchStarted = false
     },
-
-    // 无论是main touch  还是 item touch 都让其角度为定格的角度
-    fixedRadians() {
-      // todo: 判断移动了多少, 直接角度切换一个格子 ???
-      // 判断左右, 直接把defaultRadians中的元素移动位置
-      const step = (2 * Math.PI) / this.items.length
-      const defaultRadians = this.initRadian(this.items.length)
-
-      // 找出最接近0的偏移量, 也就是找出绝对值最小的元素
-      let min_r = null
-      let min_index = null
-      this.currentItemsRadian.forEach((r, index) => {
-        if (!min_r) {
-          min_r = r
-          min_index = index
-        }
-
-        if (Math.abs(r) < Math.abs(min_r)) {
-          min_r = r
-          min_index = index
-        }
-      })
-
-      console.log("min_r", min_r, "min_index:", min_index)
-
-      // 如果min_r > 0 那么说明中心偏左
-      // 如果min_r < 0 , 中心偏右, 那么应该多移动一个格子
-      // 则将标准值移动 index 个位置  , 也就是角度数组中 index 处 , 应该是该为0
-      // min_r < 0 ? min_index++ : min_index--
-
-      // 0 弧度 === index 0
-      // 右移一个 ,  0 弧度 == index 13
-      // 右移2个 , 0 弧度 == index 12
-      // 右移3个,   0 弧度 == index 11
-
-      let count = Math.abs(this.items.length - min_index) % this.items.length
-
-      // if (min_r > 0) min_index++
-      // for (let i = 0; i <= count; i++) {
-      //   let _r = defaultRadians.pop()
-      //   defaultRadians.unshift(_r)
-      // }
-
-      // todo ????
-      if (this.mainTouchMovedX > 0) {
-        console.log("右边移动....")
-        // if (min_r < 0) min_index += 1
-        for (let i = 0; i < count; i++) {
-          let _r = defaultRadians.shift()
-          defaultRadians.push(_r)
-          // let _r = defaultRadians.pop()
-          // defaultRadians.unshift(_r)
-        }
-      } else if (this.mainTouchMovedX < 0) {
-        console.log("left边移动....")
-        // if (min_r > 0) min_index -= 1
-        for (let i = 0; i < count; i++) {
-          let _r = defaultRadians.shift()
-          defaultRadians.push(_r)
-        }
-      }
-      console.log("main touch end defaultRadians: ", defaultRadians)
-      this.currentItemsRadian = defaultRadians
-      this._onTouchMoveUpdateItemPosition()
-    },
-
     duplicateItems() {
       this.items = [...this.items, ...this.items]
       // this.items = [...this.items]
@@ -447,16 +285,11 @@ export default {
     startAnimate() {
       // interval 存在, 动画已经在运行, 则退出
       if (this.animateInterval) return
-      this.animate()
+      this.animate(this.items.length, this.radiusLong, this.radiusShort)
     },
 
     // 滑动开始 , 初始化坐标
     itemTouchstart(e, item) {
-      // 以mainTouch 为主, 如果mainTouch 手势已经启动, 那么不执行itemTouch
-      if (this.mainTouchstart) {
-        // console.log("itemTouchstart, mainTouch running , return ")
-        // return
-      }
       console.log("itemTouchStart", e, "item:", item)
       e.stopPropagation()
       e.preventDefault()
@@ -497,7 +330,7 @@ export default {
         )
       }
 
-      // e.preventDefault()
+      e.preventDefault()
       // 滑动太短取消操作
       if (
         Math.abs(currentTouch.x - this.initTouch.x) < 2 ||
@@ -506,9 +339,8 @@ export default {
         console.log("滑动移动量太小, 取消处理...")
         return
       }
-      // itemTouchMove 开始, 暂停动画
-      this.paused = true
-
+      // 手势滑动, 先取消动画
+      this.stopAnimate()
       // console.log(
       //   "currentTouch:",
       //   currentTouch,
@@ -521,24 +353,24 @@ export default {
       // )
       // 计算角度 , 需要更新所有item的角度
       for (let i = 0; i < this.currentItemsRadian.length; i++) {
-        const dist =
-          Math.atan2(
-            (this.centerPoint.x - currentTouch.x) *
-              (this.centerPoint.y - this.initTouch.y) -
-              (this.centerPoint.y - currentTouch.y) *
-                (this.centerPoint.x - this.initTouch.x),
-            (this.centerPoint.x - currentTouch.x) *
-              (this.centerPoint.x - this.initTouch.x) +
-              (this.centerPoint.y - currentTouch.y) *
-                (this.centerPoint.y - this.initTouch.y)
-          ) / this.slowTimes
+        const dist = Math.atan2(
+          (this.centerPoint.x - currentTouch.x) *
+            (this.centerPoint.y - this.initTouch.y) -
+            (this.centerPoint.y - currentTouch.y) *
+              (this.centerPoint.x - this.initTouch.x),
+          (this.centerPoint.x - currentTouch.x) *
+            (this.centerPoint.x - this.initTouch.x) +
+            (this.centerPoint.y - currentTouch.y) *
+              (this.centerPoint.y - this.initTouch.y)
+        )
         // let _angle = -dist * (180 / Math.PI)
         // console.log("dist", dist)
         this.currentItemsRadian[i] =
           (this.currentItemsRadian[i] - dist) % (2 * Math.PI)
       }
 
-      // this._onTouchMoveUpdateItemPosition()
+      // 根据角度改变来更新位置
+      this._onTouchMoveUpdateItemPosition()
     },
 
     _onTouchMoveUpdateItemPosition() {
@@ -559,70 +391,60 @@ export default {
         }
       }
 
-      // console.log("this.currentItemsRadian:", this.currentItemsRadian)
-      // console.log("this.initPositions :", this.initPositions)
+      console.log("this.currentItemsRadian:", this.currentItemsRadian)
+      console.log("this.initPositions :", this.initPositions)
     },
 
-    // 滑动结束
+    // 滑动结束, 开始动画
     itemTouchend(e, item) {
       // console.log("itemTouchEnd", e, "item:", item)
-      this.paused = false
-      if (!this.itemTouchStarted) return
+      //todo
       e.stopPropagation()
       e.preventDefault()
-      this.fixedRadians()
+      this.startAnimate()
       this.itemTouchStarted = false
     },
 
-    // 将自动的动画和手势移动时候的角度到位置的移动整合在一起
-    animate() {
-      const _animate = () => {
-        this.animateInterval = setInterval(() => {
-          // 自动动画
-          if (this.autoAnimate && !this.itemTouchStarted && !this.paused) {
-            this._autoMove()
-          } else if (this.itemTouchStarted || this.mainTouchStarted) {
-            // 根据角度改变来更新位置
-            this._onTouchMoveUpdateItemPosition()
-          }
-        }, 100)
-      }
-      _animate()
-    },
-
-    _autoMove() {
-      const count = this.items.length
+    // 动画
+    animate(count, radiusLong, radiusShort) {
+      // 如果有上次的角度则继续上次的角度
       let theta = this.currentItemsRadian
         ? this.currentItemsRadian
         : this.initRadian(count)
       // 移动弧长
-      let move = Math.PI / this.slowTimesForAutoSpin
+      let move = Math.PI / 60
+      // console.log("theta:", theta)
 
-      let that = this
-      theta.forEach((item, i, arr) => {
-        arr[i] =
-          that.direction === "toRight"
-            ? (item + move) % (2 * Math.PI)
-            : (item - move) % (2 * Math.PI)
-        that.initPositions[i].x = Math.round(
-          Math.cos(theta[i]) * that.radiusLong
-        )
-        that.initPositions[i].y = Math.round(
-          Math.sin(theta[i]) * that.radiusShort
-        )
-        // 判断是否到达中间位置
-        if (that.active !== i && that.isActive(that.initPositions[i])) {
-          that.active = i
-          // console.log("active:", that.active)
-        }
-      })
+      const that = this
 
-      // 实时保留角度
-      that.currentItemsRadian = theta
+      const _animate = function (_radiusLong, _radiusShort) {
+        that.animateInterval = setInterval(() => {
+          theta.forEach((item, i, arr) => {
+            arr[i] =
+              that.direction === "toRight"
+                ? (item + move) % (2 * Math.PI)
+                : (item - move) % (2 * Math.PI)
+            that.initPositions[i].x = Math.round(
+              Math.cos(theta[i]) * _radiusLong
+            )
+            that.initPositions[i].y = Math.round(
+              Math.sin(theta[i]) * _radiusShort
+            )
+            // 判断是否到达中间位置
+            if (that.active !== i && that.isActive(that.initPositions[i])) {
+              that.active = i
+              // console.log("active:", that.active)
+            }
+          })
+
+          // 实时保留角度
+          that.currentItemsRadian = theta
+        }, 150)
+      }
+      _animate(radiusLong, radiusShort)
     },
 
     // 根据传递的item position 判断是否到达active中间位置
-    // todo better way
     isActive(itemPosition) {
       return (
         itemPosition.x - this.activePosition.x < 50 &&
@@ -638,11 +460,13 @@ export default {
     // 弹窗关闭
     closeModal() {
       this.modalShow = false
+      this.startAnimate()
     },
 
     // 打开弹窗
     showModal() {
       this.modalShow = true
+      this.stopAnimate()
     },
   },
 }
