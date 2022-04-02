@@ -2,7 +2,7 @@
   <view
     class="main"
     @touchstart="(e) => mainTouchstart(e)"
-    @touchmove="(e) => mainTouchmove(e)"
+    @touchmove="(e) => debouncedMainTouchMove(e)"
     @touchend="(e) => mainTouchend(e)"
   >
     <view class="top">
@@ -18,36 +18,37 @@
       </view>
     </view>
     <view class="control">
-      <view class="ring">
-        <view id="centerPoint" ref="centerPoint" class="centerPoint">
-          <view
-            v-for="(item, index) in items"
-            :key="index"
-            :class="[
-              'item',
-              active === index ? 'active' : '',
-              leftBottomIndex === index ? 'leftBottom' : '',
-              rightBottomIndex === index ? 'rightBottom' : '',
-            ]"
-            :style="{
-              left: `${initPositions[index].x}px`,
-              top: `${initPositions[index].y}px`,
-            }"
-            @touchstart="(e) => itemTouchstart(e, item)"
-            @touchmove="(e) => itemTouchmove(e, item)"
-            @touchend="(e) => itemTouchend(e, item)"
-          >
-            <image class="itemBackground" :src="item.image" />
-            {{ item.name }}
+      <view class="ring-container">
+        <view class="ring">
+          <view id="centerPoint" ref="centerPoint" class="centerPoint">
+            <view
+              v-for="(item, index) in items"
+              :key="index"
+              :class="[
+                'item',
+                active === index ? 'active' : '',
+                leftBottomIndex === index ? 'leftBottom' : '',
+                leftBottomIndex_1 === index ? 'leftBottom-1' : '',
+                rightBottomIndex === index ? 'rightBottom' : '',
+                rightBottomIndex_1 === index ? 'rightBottom-1' : '',
+              ]"
+              :style="{
+                left: `${initPositions[index].x}px`,
+                top: `${initPositions[index].y}px`,
+              }"
+            >
+              <image class="itemBackground" :src="item.image" />
+              {{ item.name }}
+            </view>
+            <view
+              class="activePosition"
+              :style="{
+                left: `${activePosition.x}px`,
+                top: `${activePosition.y}px`,
+              }"
+              >activePosition</view
+            >
           </view>
-          <view
-            class="activePosition"
-            :style="{
-              left: `${activePosition.x}px`,
-              top: `${activePosition.y}px`,
-            }"
-            >activePosition</view
-          >
         </view>
       </view>
     </view>
@@ -57,10 +58,12 @@
       @click="closeModal()"
       :style="!modalShow && { display: 'none' }"
     >
-      <view class="modal-content">
+      <view class="modal-content" @click="clickModalContent">
         {{ items[active].name }}
       </view>
     </view>
+
+    <div class="bottom-box"></div>
   </view>
 </template>
 
@@ -109,13 +112,18 @@ export default {
           image:
             "https://images.unsplash.com/photo-1503939313441-d753b6c7eb91?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
         },
+        {
+          index: 6,
+          name: "item7",
+          image:
+            "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
+        },
         // {
-        //   index: 6,
-        //   name: "item7",
+        //   index: 7,
+        //   name: "item8",
         //   image:
         //     "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
         // },
-        // { index: 7, name: 'item8', image: 'https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80' },
       ],
     }
   },
@@ -136,8 +144,8 @@ export default {
     this.direction = "toRight"
     // this.direction = "toLeft"
     // 椭圆大小
-    this.radiusShort = 150
-    this.radiusLong = 500
+    this.radiusShort = 210
+    this.radiusLong = 450
     this.duplicateItems()
     // control items 的位置
     // 用来存角度
@@ -157,22 +165,38 @@ export default {
     this.mainTouchInitPos = 0
     // main Touch x 移动了多少
     this.mainTouchMovedX = 0
+    // item Touch x 移动了多少
+    this.itemTouchMovedX = 0
+    // main touch 实时x位置
+    this.currentMainTouchPos = 0
+    // 一个格子的弧度
+    this.stepRadian = (2 * Math.PI) / this.items.length
     // 屏幕宽度
     this.windowWidth = 0
     // 滑动减速
-    this.slowTimes = 20
+    this.slowTimes = 10
     // 自转减速
-    this.slowTimesForAutoSpin = 100
+    this.slowTimesForAutoSpin = 200
     // 是否自动动画
     this.autoAnimate = false
     // 是否暂停动画
     this.paused = false
-    // 开始椭圆轮播动画
-    // todo
+    // 开始动画, 动画包括自动动画和手势移动时候动画
     this.startAnimate()
-    // 滑动开始位置
+    // item 滑动开始位置
     this.initTouch = { x: null, y: null }
+    // item 手势拖动实时位置
+    this.currentItemTouchPos = {
+      x: null,
+      y: null,
+    }
+    // control 椭圆中心位置
     this.centerPoint = { x: null, y: null }
+
+    // 底部中点的left值
+    // this.bottomCenterLeft = 0
+    // 底部中点的top值
+    // this.bottomCenterTop = 0
 
     this.debouncedMainTouchMove = this.debounce(this.mainTouchmove, 500)
     this.debouncedItemTouchMove = this.debounce(this.itemTouchmove, 500)
@@ -198,32 +222,33 @@ export default {
     uni.getSystemInfo({
       success: (res) => {
         this.windowWidth = res.windowWidth
+        this.windowHeight = res.windowHeight
+        // this.radiusLong = res.windowWidth / 2 - 60
+        // this.radiusShort = this.radiusLong * 0.6
+        // this.bottomCenterLeft = Math.floor(this.windowWidth / 2)
+        // this.bottomCenterTop = this.windowHeight
       },
     })
+
+    this.initPositions.forEach((itemPosition, i) => {
+      // console.log("itemPosition", itemPosition)
+      if (this.active !== i && this.isActive(itemPosition)) {
+        this.active = i
+      }
+    })
+
+    // this.bottomObserver = uni
+    //   .createIntersectionObserver(this)
+    //   .relativeTo(".rightBottom")
+    //   .observe(".bottom-box", (res) => {
+    //     console.log("bottomObserver", res)
+    //   })
   },
 
   computed: {
-    leftBottomIndex() {
-      const _step = Math.floor(this.items.length / 4)
-      const _leftBottomIndex = this.active - _step
-      const leftBottomIndex =
-        _leftBottomIndex < 0
-          ? this.items.length - 2 + _leftBottomIndex
-          : _leftBottomIndex
-      // console.log(
-      //   "active:",
-      //   this.active,
-      //   "step",
-      //   _step,
-      //   "leftBottomIndex:",
-      //   leftBottomIndex
-      // )
-      return leftBottomIndex
-    },
-
     rightBottomIndex() {
       const _step = Math.floor(this.items.length / 4)
-      const _rightBottomIndex = (this.active + _step + 1) % this.items.length
+      const _rightBottomIndex = (this.active + _step) % this.items.length
 
       // console.log(
       //   "active:",
@@ -235,38 +260,55 @@ export default {
       // )
       return _rightBottomIndex
     },
+
+    leftBottomIndex() {
+      let leftBottomIndex = this.rightBottomIndex + this.items.length / 2
+      if ((this.items.length / 2) % 2 == 1) {
+        leftBottomIndex += 1
+      }
+      // console.log("leftBottomIndex:", leftBottomIndex)
+      return leftBottomIndex % this.items.length
+    },
+
+    rightBottomIndex_1() {
+      return (this.rightBottomIndex + this.items.length - 1) % this.items.length
+    },
+
+    leftBottomIndex_1() {
+      return (this.leftBottomIndex + 1) % this.items.length
+    },
   },
   methods: {
     debounce(fn, delay) {
       let timer = null //借助闭包
-      return function () {
+      return function (...args) {
         if (timer) {
           clearTimeout(timer) //进入该分支语句，说明当前正在一个计时过程中，并且又触发了相同事件。所以要取消当前的计时，重新开始计时
-          timer = setTimeout(fn, delay)
+          timer = setTimeout(fn(...args), delay)
         } else {
-          timer = setTimeout(fn, delay) // 进入该分支说明当前并没有在计时，那么就开始一个计时
+          timer = setTimeout(fn(...args), delay) // 进入该分支说明当前并没有在计时，那么就开始一个计时
         }
       }
     },
 
     mainTouchstart(e) {
-      console.log("mainTouchstart, ", e)
+      // console.log("mainTouchstart, ", e)
       this.mainTouchInitPos = e.touches[0].clientX
+      this.startUpdateTouchMovePrevPosition()
     },
 
     mainTouchmove(e) {
-      console.log("mainTouchmove", e)
       const currentPosition = e.touches[0].clientX
-      console.log("currentPosition", currentPosition)
+      // console.log("mainTouchmove", e, "currentPosition", currentPosition)
 
       e.preventDefault()
 
       // 滑动太少不处理
-      if (Math.abs(currentPosition - this.mainTouchInitPos) < 20) {
-        console.log("mainTouch滑动移动量太小, 取消处理...")
-        this.mainTouchStarted = false
-        return
-      }
+      // if (Math.abs(currentPosition - this.mainTouchInitPos) < 1) {
+      //   console.log("mainTouch滑动移动量太小, 取消处理...")
+      //   this.mainTouchStarted = false
+      //   return
+      // }
 
       // 如果item 也在滑动, 则也不处理
 
@@ -283,7 +325,10 @@ export default {
         // 根据横移滑动计算角度
         const touchMove = currentPosition - this.mainTouchInitPos
         this.mainTouchMovedX = touchMove
+        this.currentMainTouchPos = currentPosition
+
         let touchMoveRadian = (touchMove / this.windowWidth) * 2 * Math.PI
+
         // console.log(
         //   "currentPosition:",
         //   currentPosition,
@@ -313,9 +358,10 @@ export default {
     mainTouchend(e) {
       this.paused = false
       if (!this.mainTouchStarted) return
-      console.log("mainTouchend", e)
+      // console.log("mainTouchend", e)
       this.fixedRadians()
       this.mainTouchStarted = false
+      this.mainTouchMovedX = 0
     },
 
     // 无论是main touch  还是 item touch 都让其角度为定格的角度
@@ -340,30 +386,18 @@ export default {
         }
       })
 
-      console.log("min_r", min_r, "min_index:", min_index)
-
-      // 如果min_r > 0 那么说明中心偏左
-      // 如果min_r < 0 , 中心偏右, 那么应该多移动一个格子
-      // 则将标准值移动 index 个位置  , 也就是角度数组中 index 处 , 应该是该为0
-      // min_r < 0 ? min_index++ : min_index--
-
-      // 0 弧度 === index 0
-      // 右移一个 ,  0 弧度 == index 13
-      // 右移2个 , 0 弧度 == index 12
-      // 右移3个,   0 弧度 == index 11
+      // console.log("min_r", min_r, "min_index:", min_index)
 
       let count = Math.abs(this.items.length - min_index) % this.items.length
+      // console.log("this.mainTouchMovedX", this.mainTouchMovedX)
 
-      // if (min_r > 0) min_index++
-      // for (let i = 0; i <= count; i++) {
-      //   let _r = defaultRadians.pop()
-      //   defaultRadians.unshift(_r)
-      // }
-
-      // todo ????
+      // todo : 无论如何都无法阻止main Touch 的执行 , 所以只需要保留main touch 即可, 完全可以删除 item touch
+      // 当只是item touch的时候,  在mainTouch中希望通过判断item Touch start来阻止mainTouchMove的执行
+      // 但是因为mainTouch 每次都会先触发 , 于是item touch end 后执行到这里的时候
+      // 每次也能正常判断mainTouchMovedX
       if (this.mainTouchMovedX > 0) {
         console.log("右边移动....")
-        // if (min_r < 0) min_index += 1
+        if (min_r > 0 && Math.abs(min_r) > step / 8) count += 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
           defaultRadians.push(_r)
@@ -372,13 +406,14 @@ export default {
         }
       } else if (this.mainTouchMovedX < 0) {
         console.log("left边移动....")
+        if (min_r < 0 && Math.abs(min_r) > step / 7) count += 1
         // if (min_r > 0) min_index -= 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
           defaultRadians.push(_r)
         }
       }
-      console.log("main touch end defaultRadians: ", defaultRadians)
+      // console.log("main touch end defaultRadians: ", defaultRadians)
       this.currentItemsRadian = defaultRadians
       this._onTouchMoveUpdateItemPosition()
     },
@@ -393,7 +428,12 @@ export default {
       let averageAngle = 360 / count
       let theta = []
       for (let i = 0; i < count; i++) {
-        theta.push((i * averageAngle * Math.PI) / 180)
+        let radian = (i * averageAngle * Math.PI) / 180
+        // todo
+        if ((this.items.length / 2) % 2 === 1) {
+          radian = radian - Math.PI / 2
+        }
+        theta.push(radian)
       }
       return theta
     },
@@ -403,7 +443,7 @@ export default {
       let result = []
       let theta = this.initRadian(count)
       this.currentItemsRadian = theta
-      console.log("initEllipse:", theta, this.currentItemsRadian)
+      // console.log("initEllipse:", theta, this.currentItemsRadian)
 
       for (let i = 0; i < count; i++) {
         let x = Math.round(Math.cos(theta[i]) * radiusLong)
@@ -415,14 +455,12 @@ export default {
       }
 
       // console.log(JSON.stringify(result))
-
       return result
     },
 
     // todo: 判断左右, 根据左右位置进行screw变形?
     // 当active 确定的时候, 它的最边上的元素可以通过下标确定最远端元素,
     // 方向也是确定的, 就可以进行动画
-
     // 确定这个item 在active的左边还是右边
     itemOnLeftOrRight(index) {
       if (index === active) return
@@ -436,18 +474,32 @@ export default {
       return { x, y }
     },
 
-    // 停止动画
-
-    stopAnimate() {
-      this.clear()
-    },
-
     // 开始动画
 
     startAnimate() {
       // interval 存在, 动画已经在运行, 则退出
       if (this.animateInterval) return
       this.animate()
+    },
+
+    // 及时更新上次touch的位置, mainTouch 和 itemTouch
+    // 单独一个interval 是因为动画的间隔时间短, 而更新上次touch位置需要的间隔长不少
+    startUpdateTouchMovePrevPosition() {
+      if (this.touchMovePrevPositionInterval) return
+      this.touchMovePrevPositionInterval = setInterval(() => {
+        // mainTouch 开始了且有初始值
+        if (this.mainTouchStarted && this.currentMainTouchPos) {
+          // console.log("updating mainTouchInitPos", this.currentMainTouchPos)
+          this.mainTouchInitPos = this.currentMainTouchPos
+        }
+
+        if (this.itemTouchStarted && this.currentItemTouchPos.x) {
+          this.initTouch = this.currentItemTouchPos
+        }
+
+        // itemTouch
+        // if (this.itemTouchStarted && this.currentMainTouchPos)
+      }, 200)
     },
 
     // 滑动开始 , 初始化坐标
@@ -474,6 +526,14 @@ export default {
       e.preventDefault()
       // 错误处理, 初始位置等没有初始化都不进行改变操作直接退出
       if (!this.itemTouchStarted) return
+
+      const currentTouch = {
+        x: e.changedTouches[0].pageX,
+        y: e.changedTouches[0].pageY,
+      }
+
+      this.currentItemTouchPos = currentTouch
+
       if (
         !this.initTouch.x ||
         !this.initTouch.y ||
@@ -482,11 +542,6 @@ export default {
       ) {
         console.warn("滑动事件获取初始坐标有误...")
         return
-      }
-
-      const currentTouch = {
-        x: e.changedTouches[0].pageX,
-        y: e.changedTouches[0].pageY,
       }
 
       if (!this.currentItemsRadian || this.currentItemsRadian.length < 1) {
@@ -504,8 +559,11 @@ export default {
         Math.abs(currentTouch.y - this.initTouch.y) < 2
       ) {
         console.log("滑动移动量太小, 取消处理...")
+        this.itemTouchStarted = false
         return
       }
+
+      this.itemTouchMovedX = currentTouch.x - this.initTouch.x
       // itemTouchMove 开始, 暂停动画
       this.paused = true
 
@@ -548,7 +606,7 @@ export default {
 
       for (let i = 0; i < this.currentItemsRadian.length; i++) {
         const radian = this.currentItemsRadian[i]
-        console.log("radian:", radian)
+        // console.log("radian:", radian)
         this.initPositions[i].x = Math.round(Math.cos(radian) * this.radiusLong)
         this.initPositions[i].y = Math.round(
           Math.sin(radian) * this.radiusShort
@@ -563,7 +621,7 @@ export default {
       // console.log("this.initPositions :", this.initPositions)
     },
 
-    // 滑动结束
+    // 滑动结束,调用fixedRadians
     itemTouchend(e, item) {
       // console.log("itemTouchEnd", e, "item:", item)
       this.paused = false
@@ -572,6 +630,7 @@ export default {
       e.preventDefault()
       this.fixedRadians()
       this.itemTouchStarted = false
+      this.itemTouchMovedX = 0
     },
 
     // 将自动的动画和手势移动时候的角度到位置的移动整合在一起
@@ -585,7 +644,7 @@ export default {
             // 根据角度改变来更新位置
             this._onTouchMoveUpdateItemPosition()
           }
-        }, 100)
+        }, 20)
       }
       _animate()
     },
@@ -596,7 +655,7 @@ export default {
         ? this.currentItemsRadian
         : this.initRadian(count)
       // 移动弧长
-      let move = Math.PI / this.slowTimesForAutoSpin
+      let move = Math.PI / (2 * this.slowTimesForAutoSpin)
 
       let that = this
       theta.forEach((item, i, arr) => {
@@ -625,7 +684,7 @@ export default {
     // todo better way
     isActive(itemPosition) {
       return (
-        itemPosition.x - this.activePosition.x < 50 &&
+        itemPosition.x - this.activePosition.x < 80 &&
         itemPosition.y - this.activePosition.y < 5
       )
     },
@@ -633,6 +692,9 @@ export default {
     clear() {
       clearInterval(this.animateInterval)
       this.animateInterval = null
+      clearInterval(this.touchMovePrevPositionInterval)
+      this.touchMovePrevPositionInterval = null
+      if (this.bottomObserver) this.bottomObserver.disconnect()
     },
 
     // 弹窗关闭
@@ -644,6 +706,11 @@ export default {
     showModal() {
       this.modalShow = true
     },
+
+    clickModalContent(e) {
+      e.stopPropagation()
+      e.preventDefault()
+    },
   },
 }
 </script>
@@ -653,6 +720,7 @@ page {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  animation-fill-mode: forwards;
 }
 
 $orange: #ff7849;
@@ -660,6 +728,9 @@ $orange: #ff7849;
 $orange-100: #fdba74;
 $orange-500: #f97316;
 $yellow-300: #fde047;
+$duration-long: 0.3s;
+$duration-short: 0.1s;
+$bottom-box-height: 80px;
 .main {
   width: 100vw;
   height: 100vh;
@@ -673,22 +744,23 @@ $yellow-300: #fde047;
   // // justify-content: center;
   background-image: url("https://images.unsplash.com/photo-1464802686167-b939a6910659?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1450&q=80");
   background-position: cover;
-  background-repeat: no-repeat;
+  background-repeat: repeat;
   position: relative;
 
   .top {
-    height: 80%;
+    height: 100%;
+    // height: auto;
     width: 70%;
     // border: solid 1px red;
-    margin: 90px auto 10px;
+    margin: 0 auto;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    justify-content: start;
     align-items: center;
     .stage {
-      position: relative;
       width: 400px;
       height: 200px;
-      margin: 50px auto 10px;
+      margin: 10% auto 0;
       // border: dashed 3px $orange-100;
       display: flex;
       justify-content: center;
@@ -698,93 +770,116 @@ $yellow-300: #fde047;
   }
 
   .control {
-    height: 70%;
-    width: 100%;
-    // border: solid 2px white;
+    height: 100%;
+    width: 100vw;
+    // border: solid 1px yellow;
     // overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: end;
     align-items: center;
-    position: relative;
-    // cut-half
 
-    .ring {
-      position: relative;
-      width: 200px;
-      height: 200px;
-      // 显示ring border  调整底部可见位置
-      // border: solid 3px $orange-100;
-      margin-bottom: -180px;
-      border-radius: 50%;
+    .ring-container {
+      // border: solid 1px white;
       display: flex;
       justify-content: center;
       align-items: center;
 
-      .centerPoint {
-        position: relative;
-        width: 1px;
-        height: 1px;
+      .ring {
+        position: absolute;
+        bottom: 0;
+        width: 200px;
+        height: 200px;
+        // 显示ring border  调整底部可见位置
+        // border: solid 3px $orange-100;
+        transform: translateY(50%);
+        margin-bottom: $bottom-box-height;
         border-radius: 50%;
-        .activePosition {
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          z-index: 2;
-          border: solid 1px $yellow-300;
-          background-color: red;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        .centerPoint {
+          position: relative;
+          width: 1px;
+          height: 1px;
           border-radius: 50%;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-size: 11px;
-          transform: translate(-50%, -50%);
-          display: none;
-        }
-        .item {
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          z-index: 2;
-          border: solid 1px $yellow-300;
-          background-color: white;
-          border-radius: 5px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-size: 11px;
-          transform: translate(-50%, -50%);
-          .itemBackground {
-            border-radius: 5px;
+          .activePosition {
             position: absolute;
-            top: 0;
-            left: 0;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
+            width: 50px;
+            height: 50px;
+            z-index: 2;
+            border: solid 1px $yellow-300;
+            background-color: red;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            transform: translate(-50%, -50%);
+            display: none;
           }
-        }
-        .active {
-          background-color: $orange-500;
-          color: white;
-          border: solid 3px $orange-100;
-          font-size: 12px;
-          font-weight: bold;
-          width: 60px;
-          height: 60px;
-          transition-property: width, height;
-          // transition-duration: 0.1s;
-          // transform: scale(1.1);
-        }
-        .leftBottom {
-          width: 40px;
-          height: 40px;
-          transition-property: width, height;
-        }
-        .rightBottom {
-          width: 40px;
-          height: 40px;
-          transition-property: width, height;
+          .item {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 2;
+            border: solid 1px $yellow-300;
+            background-color: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            transform: translate(-50%, -50%);
+            .itemBackground {
+              border-radius: 5px;
+              position: absolute;
+              top: 0;
+              left: 0;
+              overflow: hidden;
+              width: 100%;
+              height: 100%;
+            }
+          }
+          .active {
+            background-color: $orange-500;
+            color: white;
+            border: solid 3px $orange-100;
+            font-size: 12px;
+            font-weight: bold;
+            width: 100px !important;
+            height: 110px !important;
+            transition-property: width, height;
+            // transition-duration: $duration-long;
+            // transform: scale(1.1);
+          }
+          .leftBottom {
+            width: 50px !important;
+            height: 50px !important;
+            transition-property: width, height;
+            // transition-duration: $duration-short;
+          }
+          .leftBottom-1 {
+            width: 60px !important;
+            height: 60px !important;
+            transition-property: width, height;
+            // transition-delay: 0.2s;
+            // transition-duration: $duration-short;
+          }
+          .rightBottom {
+            width: 50px !important;
+            height: 50px !important;
+            transition-property: width, height;
+            // transition-duration: $duration-short;
+          }
+          .rightBottom-1 {
+            width: 60px !important;
+            height: 60px !important;
+            transition-property: width, height;
+            // transition-delay: $duration-short;
+            // transition
+          }
         }
       }
     }
@@ -812,6 +907,14 @@ $yellow-300: #fde047;
       justify-content: center;
       align-items: center;
     }
+  }
+  .bottom-box {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: $bottom-box-height;
+    background: rgba(0, 0, 0, 0.8);
   }
 }
 </style>

@@ -151,8 +151,7 @@ export default {
     console.log("activePosition: ", this.activePosition)
     // control items 是否开始手势滑动
     this.itemTouchStarted = false
-    // 开始椭圆轮播动画
-    // todo
+    // 开始动画 , 动画处理一直运行, 直到组件销毁
     this.startAnimate()
     // 滑动开始位置
     this.initTouch = { x: null, y: null }
