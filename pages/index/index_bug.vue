@@ -18,37 +18,39 @@
       </view>
     </view>
     <view class="control">
-      <view class="ring">
-        <view id="centerPoint" ref="centerPoint" class="centerPoint">
-          <view
-            v-for="(item, index) in items"
-            :key="index"
-            :class="[
-              'item',
-              active === index ? 'active' : '',
-              leftBottomIndex === index ? 'leftBottom' : '',
-              leftBottomIndex_right === index ? 'leftBottom-right' : '',
-              leftBottomIndex_left === index ? 'leftBottom-left' : '',
-              rightBottomIndex === index ? 'rightBottom' : '',
-              rightBottomIndex_left === index ? 'rightBottom-left' : '',
-              rightBottomIndex_right === index ? 'rightBottom-right' : '',
-            ]"
-            :style="{
-              left: `${initPositions[index].x}px`,
-              top: `${initPositions[index].y}px`,
-            }"
-          >
-            <image class="itemBackground" :src="item.image" />
-            {{ item.name }}
+      <view class="ring-container">
+        <view class="ring">
+          <view id="centerPoint" ref="centerPoint" class="centerPoint">
+            <view
+              v-for="(item, index) in items"
+              :key="index"
+              :class="[
+                'item',
+                active === index ? 'active' : '',
+                leftBottomIndex === index ? 'leftBottom' : '',
+                leftBottomIndex_right === index ? 'leftBottom-right' : '',
+                leftBottomIndex_left === index ? 'leftBottom-left' : '',
+                rightBottomIndex === index ? 'rightBottom' : '',
+                rightBottomIndex_left === index ? 'rightBottom-left' : '',
+                rightBottomIndex_right === index ? 'rightBottom-right' : '',
+              ]"
+              :style="{
+                left: `${initPositions[index].x}px`,
+                top: `${initPositions[index].y}px`,
+              }"
+            >
+              <image class="itemBackground" :src="item.image" />
+              {{ item.name }}
+            </view>
+            <view
+              class="activePosition"
+              :style="{
+                left: `${activePosition.x}px`,
+                top: `${activePosition.y}px`,
+              }"
+              >activePosition</view
+            >
           </view>
-          <view
-            class="activePosition"
-            :style="{
-              left: `${activePosition.x}px`,
-              top: `${activePosition.y}px`,
-            }"
-            >activePosition</view
-          >
         </view>
       </view>
     </view>
@@ -63,7 +65,12 @@
       </view>
     </view>
 
-    <div class="bottom-box">Lorem ipsum dolor sit amet, consectetur</div>
+    <div class="bottom-box">
+      hello hello hello hello hello hello hello hello hello hello hello hello
+      hello hello hello hello hello hello hello hello hello hello hello hello
+      hello hello hello hello hello hello hello hello hello hello hello hello
+      hello hello hello hello hello hello hello
+    </div>
   </view>
 </template>
 
@@ -144,8 +151,8 @@ export default {
     this.direction = "toRight"
     // this.direction = "toLeft"
     // 椭圆大小
-    this.radiusShort = 300
-    this.radiusLong = 500
+    this.radiusShort = 210
+    this.radiusLong = 450
     this.duplicateItems()
     // control items 的位置
     // 用来存角度
@@ -193,6 +200,11 @@ export default {
     // control 椭圆中心位置
     this.centerPoint = { x: null, y: null }
 
+    // 底部中点的left值
+    // this.bottomCenterLeft = 0
+    // 底部中点的top值
+    // this.bottomCenterTop = 0
+
     this.debouncedMainTouchMove = this.debounce(this.mainTouchmove, 500)
     this.debouncedItemTouchMove = this.debounce(this.itemTouchmove, 500)
   },
@@ -217,15 +229,27 @@ export default {
     uni.getSystemInfo({
       success: (res) => {
         this.windowWidth = res.windowWidth
+        this.windowHeight = res.windowHeight
+        // this.radiusLong = res.windowWidth / 2 - 60
+        // this.radiusShort = this.radiusLong * 0.6
+        // this.bottomCenterLeft = Math.floor(this.windowWidth / 2)
+        // this.bottomCenterTop = this.windowHeight
       },
     })
 
     this.initPositions.forEach((itemPosition, i) => {
-      console.log("itemPosition", itemPosition)
+      // console.log("itemPosition", itemPosition)
       if (this.active !== i && this.isActive(itemPosition)) {
         this.active = i
       }
     })
+
+    // this.bottomObserver = uni
+    //   .createIntersectionObserver(this)
+    //   .relativeTo(".rightBottom")
+    //   .observe(".bottom-box", (res) => {
+    //     console.log("bottomObserver", res)
+    //   })
   },
 
   computed: {
@@ -283,7 +307,7 @@ export default {
     },
 
     mainTouchstart(e) {
-      console.log("mainTouchstart, ", e)
+      // console.log("mainTouchstart, ", e)
       this.mainTouchInitPos = e.touches[0].clientX
       this.startUpdateTouchMovePrevPosition()
     },
@@ -349,7 +373,7 @@ export default {
     mainTouchend(e) {
       this.paused = false
       if (!this.mainTouchStarted) return
-      console.log("mainTouchend", e)
+      // console.log("mainTouchend", e)
       this.fixedRadians()
       this.mainTouchStarted = false
       this.mainTouchMovedX = 0
@@ -388,7 +412,7 @@ export default {
       // 每次也能正常判断mainTouchMovedX
       if (this.mainTouchMovedX > 0) {
         console.log("右边移动....")
-        if (min_r > 0 && Math.abs(min_r) > step / 3) count += 1
+        if (min_r > 0 && Math.abs(min_r) > step / 4) count += 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
           defaultRadians.push(_r)
@@ -397,7 +421,7 @@ export default {
         }
       } else if (this.mainTouchMovedX < 0) {
         console.log("left边移动....")
-        if (min_r < 0 && Math.abs(min_r) > step / 2) count += 1
+        if (min_r < 0 && Math.abs(min_r) > step / 3) count += 1
         // if (min_r > 0) min_index -= 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
@@ -434,7 +458,7 @@ export default {
       let result = []
       let theta = this.initRadian(count)
       this.currentItemsRadian = theta
-      console.log("initEllipse:", theta, this.currentItemsRadian)
+      // console.log("initEllipse:", theta, this.currentItemsRadian)
 
       for (let i = 0; i < count; i++) {
         let x = Math.round(Math.cos(theta[i]) * radiusLong)
@@ -480,7 +504,7 @@ export default {
       this.touchMovePrevPositionInterval = setInterval(() => {
         // mainTouch 开始了且有初始值
         if (this.mainTouchStarted && this.currentMainTouchPos) {
-          console.log("updating mainTouchInitPos", this.currentMainTouchPos)
+          // console.log("updating mainTouchInitPos", this.currentMainTouchPos)
           this.mainTouchInitPos = this.currentMainTouchPos
         }
 
@@ -675,7 +699,7 @@ export default {
     // todo better way
     isActive(itemPosition) {
       return (
-        itemPosition.x - this.activePosition.x < 50 &&
+        itemPosition.x - this.activePosition.x < 80 &&
         itemPosition.y - this.activePosition.y < 5
       )
     },
@@ -685,6 +709,7 @@ export default {
       this.animateInterval = null
       clearInterval(this.touchMovePrevPositionInterval)
       this.touchMovePrevPositionInterval = null
+      if (this.bottomObserver) this.bottomObserver.disconnect()
     },
 
     // 弹窗关闭
@@ -710,6 +735,7 @@ page {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  animation-fill-mode: forwards;
 }
 
 $orange: #ff7849;
@@ -717,6 +743,8 @@ $orange: #ff7849;
 $orange-100: #fdba74;
 $orange-500: #f97316;
 $yellow-300: #fde047;
+$duration-long: 0.3s;
+$duration-short: 0.1s;
 $bottom-box-height: 80px;
 .main {
   width: 100vw;
@@ -731,7 +759,7 @@ $bottom-box-height: 80px;
   // // justify-content: center;
   background-image: url("https://images.unsplash.com/photo-1464802686167-b939a6910659?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1450&q=80");
   background-position: cover;
-  background-repeat: no-repeat;
+  background-repeat: repeat;
   position: relative;
 
   .top {
@@ -745,7 +773,6 @@ $bottom-box-height: 80px;
     justify-content: start;
     align-items: center;
     .stage {
-      position: relative;
       width: 400px;
       height: 200px;
       margin: 10% auto 0;
@@ -767,117 +794,125 @@ $bottom-box-height: 80px;
     justify-content: end;
     align-items: center;
 
-    .ring {
-      position: relative;
-      width: 200px;
-      height: 200px;
-      // 显示ring border  调整底部可见位置
-      // border: solid 3px $orange-100;
-      transform: translateY(50%);
-      margin-bottom: $bottom-box-height;
-      border-radius: 50%;
+    .ring-container {
+      // border: solid 1px white;
       display: flex;
       justify-content: center;
       align-items: center;
 
-      .centerPoint {
-        position: relative;
-        width: 1px;
-        height: 1px;
+      .ring {
+        position: absolute;
+        bottom: 0;
+        width: 200px;
+        height: 200px;
+        // 显示ring border  调整底部可见位置
+        // border: solid 3px $orange-100;
+        transform: translateY(50%);
+        margin-bottom: $bottom-box-height;
         border-radius: 50%;
-        .activePosition {
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          z-index: 2;
-          border: solid 1px $yellow-300;
-          background-color: red;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        .centerPoint {
+          position: relative;
+          width: 1px;
+          height: 1px;
           border-radius: 50%;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-size: 11px;
-          transform: translate(-50%, -50%);
-          display: none;
-        }
-        .item {
-          position: absolute;
-          width: 80px;
-          height: 80px;
-          z-index: 2;
-          border: solid 1px $yellow-300;
-          background-color: white;
-          border-radius: 5px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-size: 11px;
-          transform: translate(-50%, -50%);
-          .itemBackground {
-            border-radius: 5px;
+          .activePosition {
             position: absolute;
-            top: 0;
-            left: 0;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
+            width: 50px;
+            height: 50px;
+            z-index: 2;
+            border: solid 1px $yellow-300;
+            background-color: red;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            transform: translate(-50%, -50%);
+            display: none;
           }
-        }
-        .active {
-          background-color: $orange-500;
-          color: white;
-          border: solid 3px $orange-100;
-          font-size: 12px;
-          font-weight: bold;
-          width: 100px !important;
-          height: 110px !important;
-          transition-property: width, height;
-          // transition-duration: $duration-long;
-          // transform: scale(1.1);
-        }
-        .leftBottom {
-          width: 50px !important;
-          height: 50px !important;
-          transition-property: width, height;
-          // transform: skew(-10deg) rotateY(10deg);
-          // transition-duration: $duration-short;
-        }
-        .leftBottom-left {
-          width: 40px !important;
-          height: 40px !important;
-          // transform: skew(-15deg) rotateY(15deg);
-          transition-property: width, height;
-        }
-        .leftBottom-right {
-          width: 60px !important;
-          height: 60px !important;
-          // transform: skew(-5deg) rotateY(5deg);
-          transition-property: width, height;
-          // transition-delay: 0.2s;
-          // transition-duration: $duration-short;
-        }
-        .rightBottom {
-          width: 50px !important;
-          height: 50px !important;
-          transition-property: width, height;
-          // transform: skew(10deg) rotateY(-10deg);
-          // transition-duration: $duration-short;
-        }
-        .rightBottom-left {
-          width: 60px !important;
-          height: 60px !important;
-          transition-property: width, height;
-          // transform: skew(5deg) rotateY(-5deg);
-          // transition-delay: $duration-short;
-          // transition
-        }
-        .rightBottom-right {
-          width: 40px !important;
-          height: 40px !important;
-          transition-property: width, height;
-          // transform: skew(15deg) rotateY(-15deg);
-          // transition-delay: $duration-short;
-          // transition
+          .item {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 2;
+            border: solid 1px $yellow-300;
+            background-color: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            transform: translate(-50%, -50%);
+            .itemBackground {
+              border-radius: 5px;
+              position: absolute;
+              top: 0;
+              left: 0;
+              overflow: hidden;
+              width: 100%;
+              height: 100%;
+            }
+          }
+          .active {
+            background-color: $orange-500;
+            color: white;
+            border: solid 3px $orange-100;
+            font-size: 12px;
+            font-weight: bold;
+            width: 100px !important;
+            height: 110px !important;
+            transition-property: width, height;
+            // transition-duration: $duration-long;
+            // transform: scale(1.1);
+          }
+          .leftBottom {
+            width: 50px !important;
+            height: 50px !important;
+            transition-property: width, height;
+            // transform: skew(-10deg) rotateY(10deg);
+            // transition-duration: $duration-short;
+          }
+          .leftBottom-left {
+            width: 40px !important;
+            height: 40px !important;
+            // transform: skew(-15deg) rotateY(15deg);
+            transition-property: width, height;
+          }
+          .leftBottom-right {
+            width: 60px !important;
+            height: 60px !important;
+            // transform: skew(-5deg) rotateY(5deg);
+            transition-property: width, height;
+            // transition-delay: 0.2s;
+            // transition-duration: $duration-short;
+          }
+          .rightBottom {
+            width: 50px !important;
+            height: 50px !important;
+            transition-property: width, height;
+            // transform: skew(10deg) rotateY(-10deg);
+            // transition-duration: $duration-short;
+          }
+          .rightBottom-left {
+            width: 60px !important;
+            height: 60px !important;
+            transition-property: width, height;
+            // transform: skew(5deg) rotateY(-5deg);
+            // transition-delay: $duration-short;
+            // transition
+          }
+          .rightBottom-right {
+            width: 40px !important;
+            height: 40px !important;
+            transition-property: width, height;
+            // transform: skew(15deg) rotateY(-15deg);
+            // transition-delay: $duration-short;
+            // transition
+          }
         }
       }
     }
@@ -913,8 +948,6 @@ $bottom-box-height: 80px;
     width: 100%;
     height: $bottom-box-height;
     background: rgba(0, 0, 0, 0.8);
-    display: grid;
-    place-items: center;
     color: white;
   }
 }
