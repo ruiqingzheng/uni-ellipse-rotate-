@@ -149,7 +149,7 @@ export default {
     this.duplicateItems()
     // control items 的位置
     // 用来存角度
-    this.currentItemsRadian = this.initRadian(this.items.length)
+    this.currentItemsRadian = this.initRadian(this.items.length, "init")
     this.initPositions = this.initEllipse(
       this.items.length,
       this.radiusLong,
@@ -365,21 +365,38 @@ export default {
       // 找出最接近0的偏移量, 也就是找出绝对值最小的元素
       let min_r = null
       let min_index = null
-      this.currentItemsRadian.forEach((r, index) => {
-        if (!min_r) {
-          min_r = r
-          min_index = index
-        }
 
-        if (Math.abs(r) < Math.abs(min_r)) {
-          min_r = r
-          min_index = index
-        }
-      })
+      if ((this.items.length / 2) % 2 == 1) {
+        this.currentItemsRadian.forEach((r, index) => {
+          let tmp = r - -Math.PI / 2
+          if (min_r === null) {
+            min_r = tmp
+            min_index = index
+          }
+
+          if (Math.abs(tmp) < Math.abs(min_r)) {
+            min_r = Math.abs(tmp)
+            min_index = index
+          }
+        })
+      } else {
+        this.currentItemsRadian.forEach((r, index) => {
+          if (!min_r) {
+            min_r = r
+            min_index = index
+          }
+
+          if (Math.abs(r) < Math.abs(min_r)) {
+            min_r = r
+            min_index = index
+          }
+        })
+      }
 
       // console.log("min_r", min_r, "min_index:", min_index)
 
       let count = Math.abs(this.items.length - min_index) % this.items.length
+
       // console.log("this.mainTouchMovedX", this.mainTouchMovedX)
 
       // todo : 无论如何都无法阻止main Touch 的执行 , 所以只需要保留main touch 即可, 完全可以删除 item touch
@@ -388,7 +405,7 @@ export default {
       // 每次也能正常判断mainTouchMovedX
       if (this.mainTouchMovedX > 0) {
         console.log("右边移动....")
-        if (min_r > 0 && Math.abs(min_r) > step / 3) count += 1
+        if (min_r > 0 && Math.abs(min_r) > step / 9) count += 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
           defaultRadians.push(_r)
@@ -397,7 +414,7 @@ export default {
         }
       } else if (this.mainTouchMovedX < 0) {
         console.log("left边移动....")
-        if (min_r < 0 && Math.abs(min_r) > step / 2) count += 1
+        if (min_r < 0 && Math.abs(min_r) > step / 10) count += 1
         // if (min_r > 0) min_index -= 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
@@ -415,7 +432,7 @@ export default {
     },
 
     // 初始化弧度
-    initRadian(count) {
+    initRadian(count, type) {
       let averageAngle = 360 / count
       let theta = []
       for (let i = 0; i < count; i++) {
@@ -432,8 +449,9 @@ export default {
     // 椭圆位置
     initEllipse(count, radiusLong, radiusShort) {
       let result = []
-      let theta = this.initRadian(count)
-      this.currentItemsRadian = theta
+      // let theta = this.initRadian(count)
+      // this.currentItemsRadian = theta
+      let theta = this.currentItemsRadian
       console.log("initEllipse:", theta, this.currentItemsRadian)
 
       for (let i = 0; i < count; i++) {
@@ -787,6 +805,7 @@ $bottom-box-height: 80px;
         border-radius: 50%;
         .activePosition {
           position: absolute;
+          border: solid 1px red;
           width: 50px;
           height: 50px;
           z-index: 2;
