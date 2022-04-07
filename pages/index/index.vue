@@ -63,7 +63,11 @@
       </view>
     </view>
 
-    <div class="bottom-box">Lorem ipsum dolor sit amet, consectetur</div>
+    <view class="bottom-box">
+      <view><button class="a-button left-button">btnLeft</button></view>
+
+      <view><button class="a-button right-button">btnRight</button></view>
+    </view>
   </view>
 </template>
 
@@ -118,12 +122,12 @@ export default {
           image:
             "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
         },
-        {
-          index: 7,
-          name: "item8",
-          image:
-            "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
-        },
+        // {
+        //   index: 7,
+        //   name: "item8",
+        //   image:
+        //     "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
+        // },
       ],
     }
   },
@@ -414,7 +418,7 @@ export default {
         }
       } else if (this.mainTouchMovedX < 0) {
         console.log("left边移动....")
-        if (min_r < 0 && Math.abs(min_r) > step / 10) count += 1
+        // if (min_r < 0 && Math.abs(min_r) > step / 10) count += 1
         // if (min_r > 0) min_index -= 1
         for (let i = 0; i < count; i++) {
           let _r = defaultRadians.shift()
@@ -927,14 +931,32 @@ $bottom-box-height: 80px;
   }
   .bottom-box {
     position: absolute;
+    // overflow: hidden;
     left: 0;
     bottom: 0;
     width: 100%;
     height: $bottom-box-height;
     background: rgba(0, 0, 0, 0.8);
-    display: grid;
-    place-items: center;
+    // display: grid;
+    // place-items: center;
     color: white;
+    display: flex;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+
+    .a-button {
+      margin-top: -50px;
+    }
+
+    .left-button {
+      margin-left: 50px;
+    }
+
+    .right-button {
+      margin-right: 50px;
+    }
   }
 }
 </style>
