@@ -118,12 +118,12 @@ export default {
           image:
             "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
         },
-        // {
-        //   index: 7,
-        //   name: "item8",
-        //   image:
-        //     "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
-        // },
+        {
+          index: 7,
+          name: "item8",
+          image:
+            "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
+        },
       ],
     }
   },
@@ -375,7 +375,7 @@ export default {
           }
 
           if (Math.abs(tmp) < Math.abs(min_r)) {
-            min_r = Math.abs(tmp)
+            min_r = tmp
             min_index = index
           }
         })
