@@ -1,9 +1,15 @@
 <template>
   <view
     class="main"
-    @touchstart="(e) => mainTouchstart(e)"
-    @touchmove="(e) => debouncedMainTouchMove(e)"
-    @touchend="(e) => mainTouchend(e)"
+    @touchstart.native.stop="
+      (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        mainTouchstart(e)
+      }
+    "
+    @touchmove.native.stop="(e) => debouncedMainTouchMove(e)"
+    @touchend.native.stop="(e) => mainTouchend(e)"
   >
     <view class="top">
       <view
@@ -58,7 +64,7 @@
       @click="closeModal()"
       :style="!modalShow && { display: 'none' }"
     >
-      <view class="modal-content" @click="clickModalContent">
+      <view class="modal-content" @click.native.stop="clickModalContent">
         {{ items[active].name }}
       </view>
     </view>
@@ -67,11 +73,11 @@
       <view class="bottom-box-center">
         <view
           class="a-button left-button"
-          @tap="debouncedTapButton('left')"
+          @tap.native.stop="debouncedTapButton('left')"
         ></view>
         <view
           class="a-button right-button"
-          @tap="
+          @tap.native.stop="
             (e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -217,7 +223,7 @@ export default {
 
     this.debouncedMainTouchMove = this.debounce(this.mainTouchmove, 500)
     this.debouncedItemTouchMove = this.debounce(this.itemTouchmove, 500)
-    this.debouncedTapButton = this.debounce(this.tapButton, 200)
+    this.debouncedTapButton = this.debounce(this.tapButton, 100)
   },
 
   mounted() {
@@ -752,7 +758,7 @@ export default {
       // 上次还没执行完则return
       if (this.tapButtonInterval) return
       const max = (2 * Math.PI) / this.items.length
-      const _move = max / 20
+      const _move = max / 5
       let count = 0
       const _radians = [...this.currentItemsRadian]
 
@@ -775,7 +781,7 @@ export default {
           this._onTouchMoveUpdateItemPosition()
         }
         count += _move
-      }, 20)
+      }, 15)
 
       function moveFinished() {
         if (direction === "left") {
