@@ -65,8 +65,20 @@
 
     <view class="bottom-box">
       <view class="bottom-box-center">
-        <view class="a-button left-button" @tap="tapButton('left')"></view>
-        <view class="a-button right-button" @tap="tapButton('right')"></view>
+        <view
+          class="a-button left-button"
+          @tap="debouncedTapButton('left')"
+        ></view>
+        <view
+          class="a-button right-button"
+          @tap="
+            (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              debouncedTapButton('right')
+            }
+          "
+        ></view>
       </view>
     </view>
   </view>
@@ -198,8 +210,14 @@ export default {
     // control 椭圆中心位置
     this.centerPoint = { x: null, y: null }
 
+    // 按钮点击interval
+    this.tapButtonInterval = null
+    this.animateInterval = null
+    this.touchMovePrevPositionInterval = null
+
     this.debouncedMainTouchMove = this.debounce(this.mainTouchmove, 500)
     this.debouncedItemTouchMove = this.debounce(this.itemTouchmove, 500)
+    this.debouncedTapButton = this.debounce(this.tapButton, 200)
   },
 
   mounted() {
@@ -288,6 +306,8 @@ export default {
     },
 
     mainTouchstart(e) {
+      e.stopPropagation()
+      e.preventDefault()
       console.log("mainTouchstart, ", e)
       this.mainTouchInitPos = e.touches[0].clientX
       this.startUpdateTouchMovePrevPosition()
@@ -708,6 +728,8 @@ export default {
       this.animateInterval = null
       clearInterval(this.touchMovePrevPositionInterval)
       this.touchMovePrevPositionInterval = null
+      clearInterval(this.tapButtonInterval)
+      this.tapButtonInterval = null
     },
 
     // 弹窗关闭
@@ -727,27 +749,46 @@ export default {
 
     tapButton(direction) {
       console.log("tapButton direction", direction)
-      const _step = (2 * Math.PI) / this.items.length
-      console.log(
-        "step",
-        _step,
-        this.currentItemsRadian[0] - this.currentItemsRadian[1]
-      )
-      // for (let i = 0; i < this.currentItemsRadian.length; i++) {
-      //   if (direction === "left") {
-      //     this.currentItemsRadian[i] -= _step
-      //   } else if (direction === "right") {
-      //     this.currentItemsRadian[i] += _step
-      //   }
-      // }
-      if (direction === "left") {
-        const _r = this.currentItemsRadian.pop()
-        this.currentItemsRadian.unshift(_r)
-      } else {
-        const _r = this.currentItemsRadian.shift()
-        this.currentItemsRadian.push(_r)
+      // 上次还没执行完则return
+      if (this.tapButtonInterval) return
+      const max = (2 * Math.PI) / this.items.length
+      const _move = max / 20
+      let count = 0
+      const _radians = [...this.currentItemsRadian]
+
+      const that = this
+
+      this.tapButtonInterval = setInterval(() => {
+        if (count >= max) {
+          moveFinished()
+          // this.fixedRadians()
+          clearInterval(this.tapButtonInterval)
+          this.tapButtonInterval = null
+          return
+        }
+        for (let i = 0; i < this.currentItemsRadian.length; i++) {
+          if (direction === "left") {
+            this.currentItemsRadian[i] -= _move
+          } else if (direction === "right") {
+            this.currentItemsRadian[i] += _move
+          }
+          this._onTouchMoveUpdateItemPosition()
+        }
+        count += _move
+      }, 20)
+
+      function moveFinished() {
+        if (direction === "left") {
+          const _r = _radians.pop()
+          _radians.unshift(_r)
+        } else {
+          const _r = _radians.shift()
+          _radians.push(_r)
+        }
+        that.currentItemsRadian = _radians
+        // that.fixedRadians()
+        // that._onTouchMoveUpdateItemPosition()
       }
-      this._onTouchMoveUpdateItemPosition()
     },
   },
 }
@@ -976,6 +1017,7 @@ $radianLong: 500px;
     flex-direction: row;
     justify-content: center;
     align-items: center;
+    z-index: 10;
 
     .bottom-box-center {
       position: relative;
