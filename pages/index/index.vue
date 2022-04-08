@@ -64,9 +64,10 @@
     </view>
 
     <view class="bottom-box">
-      <view><button class="a-button left-button">btnLeft</button></view>
-
-      <view><button class="a-button right-button">btnRight</button></view>
+      <view class="bottom-box-center">
+        <view class="a-button left-button" @tap="tapButton('left')"></view>
+        <view class="a-button right-button" @tap="tapButton('right')"></view>
+      </view>
     </view>
   </view>
 </template>
@@ -723,6 +724,31 @@ export default {
       e.stopPropagation()
       e.preventDefault()
     },
+
+    tapButton(direction) {
+      console.log("tapButton direction", direction)
+      const _step = (2 * Math.PI) / this.items.length
+      console.log(
+        "step",
+        _step,
+        this.currentItemsRadian[0] - this.currentItemsRadian[1]
+      )
+      // for (let i = 0; i < this.currentItemsRadian.length; i++) {
+      //   if (direction === "left") {
+      //     this.currentItemsRadian[i] -= _step
+      //   } else if (direction === "right") {
+      //     this.currentItemsRadian[i] += _step
+      //   }
+      // }
+      if (direction === "left") {
+        const _r = this.currentItemsRadian.pop()
+        this.currentItemsRadian.unshift(_r)
+      } else {
+        const _r = this.currentItemsRadian.shift()
+        this.currentItemsRadian.push(_r)
+      }
+      this._onTouchMoveUpdateItemPosition()
+    },
   },
 }
 </script>
@@ -739,7 +765,11 @@ $orange: #ff7849;
 $orange-100: #fdba74;
 $orange-500: #f97316;
 $yellow-300: #fde047;
+// 底部定位, 底部内容区域高度
 $bottom-box-height: 80px;
+
+// 底部按钮定位, 按钮位置根据圆半径来定位
+$radianLong: 500px;
 .main {
   width: 100vw;
   height: 100vh;
@@ -752,8 +782,10 @@ $bottom-box-height: 80px;
   // align-items: center;
   // // justify-content: center;
   background-image: url("https://images.unsplash.com/photo-1464802686167-b939a6910659?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1450&q=80");
-  background-position: cover;
+  // background-position: cover;
+  background-position: center;
   background-repeat: no-repeat;
+  background-size: cover;
   position: relative;
 
   .top {
@@ -941,21 +973,43 @@ $bottom-box-height: 80px;
     // place-items: center;
     color: white;
     display: flex;
-    display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
 
-    .a-button {
-      margin-top: -50px;
-    }
+    .bottom-box-center {
+      position: relative;
+      height: 100%;
+      // border: solid 1px red;
+      width: 0;
+      height: 0;
+      .a-button {
+        margin-top: -20px;
+      }
 
-    .left-button {
-      margin-left: 50px;
-    }
+      .left-button {
+        position: absolute;
+        right: 500px;
+        transform: translateX(50%);
+        // margin-left: 50px;
+        border: solid 50px transparent;
+        width: 0;
+        height: 0;
+        border-top: 30px solid #38bdf8;
+        // transform: skew(20deg) rotateY(45deg);
+      }
 
-    .right-button {
-      margin-right: 50px;
+      .right-button {
+        position: absolute;
+        transform: translateX(-50%);
+        left: 500px;
+        // margin-right: 50px;
+        border: solid 50px transparent;
+        width: 0;
+        height: 0;
+        border-top: 30px solid #38bdf8;
+        // transform: skew(20deg) rotateY(45deg);
+      }
     }
   }
 }
