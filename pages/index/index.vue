@@ -135,12 +135,12 @@ export default {
           image:
             "https://images.unsplash.com/photo-1503939313441-d753b6c7eb91?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
         },
-        {
-          index: 6,
-          name: "item7",
-          image:
-            "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
-        },
+        // {
+        //   index: 6,
+        //   name: "item7",
+        //   image:
+        //     "https://images.unsplash.com/photo-1590821695525-1e86ef70a7ee?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
+        // },
         // {
         //   index: 7,
         //   name: "item8",
@@ -163,8 +163,8 @@ export default {
   },
   created() {
     this.clear()
-    // 顺时针 toRight , 逆时针  toLeft
-    this.direction = "toRight"
+    // 自动旋转或轮播方向, 顺时针 right , 逆时针  left
+    this.direction = "left"
     // this.direction = "toLeft"
     // 椭圆大小
     this.radiusShort = 300
@@ -200,12 +200,23 @@ export default {
     this.slowTimes = 10
     // 自转减速
     this.slowTimesForAutoSpin = 200
-    // 是否自动动画
+    // 是否自动旋转
     this.autoAnimate = false
+    // 是否自动轮播
+    this.autoSwipe = true
+    // 手动滑动中
+    this.tapSwiping = false
+    // 自动轮播间隔秒数
+    this.autoSwipeSec = 2
     // 是否暂停动画
     this.paused = false
+
     // 开始动画, 动画包括自动动画和手势移动时候动画
     this.startAnimate()
+
+    if (this.autoSwipe) {
+      this.autoSwipeFunction()
+    }
     // item 滑动开始位置
     this.initTouch = { x: null, y: null }
     // item 手势拖动实时位置
@@ -216,8 +227,6 @@ export default {
     // control 椭圆中心位置
     this.centerPoint = { x: null, y: null }
 
-    // 按钮点击interval
-    this.tapButtonInterval = null
     this.animateInterval = null
     this.touchMovePrevPositionInterval = null
 
@@ -387,7 +396,7 @@ export default {
     },
 
     // 无论是main touch  还是 item touch 都让其角度为定格的角度
-    fixedRadians() {
+    fixedRadians(radians) {
       // todo: 判断移动了多少, 直接角度切换一个格子 ???
       // 判断左右, 直接把defaultRadians中的元素移动位置
       const step = (2 * Math.PI) / this.items.length
@@ -397,6 +406,13 @@ export default {
       let min_r = null
       let min_index = null
 
+      // console.log(
+      //   "currentItemsRadian in fixed:",
+      //   this.currentItemsRadian,
+      //   "defaultRadians:",
+      //   defaultRadians
+      // )
+
       if ((this.items.length / 2) % 2 == 1) {
         this.currentItemsRadian.forEach((r, index) => {
           let tmp = r - -Math.PI / 2
@@ -404,7 +420,6 @@ export default {
             min_r = tmp
             min_index = index
           }
-
           if (Math.abs(tmp) < Math.abs(min_r)) {
             min_r = tmp
             min_index = index
@@ -436,21 +451,13 @@ export default {
       // 每次也能正常判断mainTouchMovedX
       if (this.mainTouchMovedX > 0) {
         console.log("右边移动....")
-        if (min_r > 0 && Math.abs(min_r) > step / 9) count += 1
-        for (let i = 0; i < count; i++) {
-          let _r = defaultRadians.shift()
-          defaultRadians.push(_r)
-          // let _r = defaultRadians.pop()
-          // defaultRadians.unshift(_r)
-        }
+        if (min_r > 0 && Math.abs(min_r) > step / 2) count += 1
       } else if (this.mainTouchMovedX < 0) {
         console.log("left边移动....")
-        // if (min_r < 0 && Math.abs(min_r) > step / 10) count += 1
-        // if (min_r > 0) min_index -= 1
-        for (let i = 0; i < count; i++) {
-          let _r = defaultRadians.shift()
-          defaultRadians.push(_r)
-        }
+      }
+      for (let i = 0; i < count; i++) {
+        let _r = defaultRadians.shift()
+        defaultRadians.push(_r)
       }
       // console.log("main touch end defaultRadians: ", defaultRadians)
       this.currentItemsRadian = defaultRadians
@@ -700,7 +707,7 @@ export default {
       let that = this
       theta.forEach((item, i, arr) => {
         arr[i] =
-          that.direction === "toRight"
+          that.direction === "right"
             ? (item + move) % (2 * Math.PI)
             : (item - move) % (2 * Math.PI)
         that.initPositions[i].x = Math.round(
@@ -734,8 +741,6 @@ export default {
       this.animateInterval = null
       clearInterval(this.touchMovePrevPositionInterval)
       this.touchMovePrevPositionInterval = null
-      clearInterval(this.tapButtonInterval)
-      this.tapButtonInterval = null
     },
 
     // 弹窗关闭
@@ -753,23 +758,20 @@ export default {
       e.preventDefault()
     },
 
-    tapButton(direction) {
-      console.log("tapButton direction", direction)
-      // 上次还没执行完则return
-      if (this.tapButtonInterval) return
+    swipe(direction, cb) {
+      this.swiping = true
       const max = (2 * Math.PI) / this.items.length
-      const _move = max / 5
+      const _move = max / 50
       let count = 0
-      const _radians = [...this.currentItemsRadian]
+      // this.fixedRadians()
+      let _radians = [...this.currentItemsRadian]
 
       const that = this
 
-      this.tapButtonInterval = setInterval(() => {
+      const move = () => {
         if (count >= max) {
-          moveFinished()
-          // this.fixedRadians()
-          clearInterval(this.tapButtonInterval)
-          this.tapButtonInterval = null
+          // if (!this.tapSwiping) this.fixedRadians()
+          if (cb && typeof cb === "function") cb()
           return
         }
         for (let i = 0; i < this.currentItemsRadian.length; i++) {
@@ -781,20 +783,32 @@ export default {
           this._onTouchMoveUpdateItemPosition()
         }
         count += _move
-      }, 15)
-
-      function moveFinished() {
-        if (direction === "left") {
-          const _r = _radians.pop()
-          _radians.unshift(_r)
-        } else {
-          const _r = _radians.shift()
-          _radians.push(_r)
-        }
-        that.currentItemsRadian = _radians
-        // that.fixedRadians()
-        // that._onTouchMoveUpdateItemPosition()
+        requestAnimationFrame(move)
       }
+
+      requestAnimationFrame(move)
+    },
+
+    // 在自动swipe 的时候tap swipe 会导致有时候多移动一次
+    // 即使手动swipe时候暂停自动swipe 依然会出现手动tap两次, 中间又接了一次自动tap , 于是移动三格的情况
+    // 因为手动swipe 后始终要恢复自动轮播,  于是一定会出现顺着轮播方向会多移动次数
+
+    tapButton(direction) {
+      this.tapSwiping = true
+      this.paused = true
+      const cb = () => {
+        this.tapSwiping = false
+        setTimeout(() => {
+          this.paused = false
+        }, 1000)
+      }
+      this.swipe(direction, cb)
+    },
+
+    autoSwipeFunction() {
+      this.autoSwipeInterval = setInterval(() => {
+        if (this.autoSwipe && !this.paused) this.swipe(this.direction)
+      }, this.autoSwipeSec * 1000)
     },
   },
 }
