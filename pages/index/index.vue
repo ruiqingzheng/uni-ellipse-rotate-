@@ -3,8 +3,6 @@
     class="main"
     @touchstart="
       (e) => {
-        e.preventDefault()
-        e.stopPropagation()
         mainTouchstart(e)
       }
     "
@@ -156,6 +154,16 @@ export default {
     console.log("onUnload")
     this.clear()
   },
+
+  // onShow() {
+  //   console.log("page onShow")
+  //   //     this.start()
+  // },
+
+  // onHide() {
+  //   console.log("page onHide")
+  //   this.clear()
+  // },
   // 组件销毁前清理interval
   beforeDestroy: function () {
     // console.log("beforeDestroy")
@@ -211,12 +219,9 @@ export default {
     // 是否暂停动画
     this.paused = false
 
-    // 开始动画, 动画包括自动动画和手势移动时候动画
-    this.startAnimate()
+    // 开始方法, 启动自转动画和手势滑动interval
+    this.start()
 
-    if (this.autoSwipe) {
-      this.autoSwipeFunction()
-    }
     // item 滑动开始位置
     this.initTouch = { x: null, y: null }
     // item 手势拖动实时位置
@@ -227,8 +232,12 @@ export default {
     // control 椭圆中心位置
     this.centerPoint = { x: null, y: null }
 
+    // 手指滑动和自转
     this.animateInterval = null
+    // 更新手指位置
     this.touchMovePrevPositionInterval = null
+    // 自动轮播
+    this.autoSwipeInterval = null
 
     this.debouncedMainTouchMove = this.debounce(this.mainTouchmove, 500)
     this.debouncedItemTouchMove = this.debounce(this.itemTouchmove, 500)
@@ -259,7 +268,7 @@ export default {
     })
 
     this.initPositions.forEach((itemPosition, i) => {
-      console.log("itemPosition", itemPosition)
+      // console.log("itemPosition", itemPosition)
       if (this.active !== i && this.isActive(itemPosition)) {
         this.active = i
       }
@@ -321,9 +330,10 @@ export default {
     },
 
     mainTouchstart(e) {
-      e.stopPropagation()
-      e.preventDefault()
+      // e.stopPropagation()
+      // e.preventDefault()
       console.log("mainTouchstart, ", e)
+      this.paused = true
       this.mainTouchInitPos = e.touches[0].clientX
       this.startUpdateTouchMovePrevPosition()
     },
@@ -387,10 +397,10 @@ export default {
       }
     },
     mainTouchend(e) {
-      this.paused = false
       if (!this.mainTouchStarted) return
       console.log("mainTouchend", e)
       this.fixedRadians()
+      this.paused = false
       this.mainTouchStarted = false
       this.mainTouchMovedX = 0
     },
@@ -490,7 +500,7 @@ export default {
       // let theta = this.initRadian(count)
       // this.currentItemsRadian = theta
       let theta = this.currentItemsRadian
-      console.log("initEllipse:", theta, this.currentItemsRadian)
+      // console.log("initEllipse:", theta, this.currentItemsRadian)
 
       for (let i = 0; i < count; i++) {
         let x = Math.round(Math.cos(theta[i]) * radiusLong)
@@ -741,6 +751,18 @@ export default {
       this.animateInterval = null
       clearInterval(this.touchMovePrevPositionInterval)
       this.touchMovePrevPositionInterval = null
+      clearInterval(this.autoSwipeInterval)
+      this.autoSwipeInterval = null
+    },
+
+    start() {
+      // 开始动画, 动画包括自动动画和手势移动时候动画
+      console.log("executing start...")
+      this.startAnimate()
+
+      if (this.autoSwipe && !this.autoSwipeInterval) {
+        this.autoSwipeFunction()
+      }
     },
 
     // 弹窗关闭
@@ -761,12 +783,11 @@ export default {
     swipe(direction, cb) {
       this.swiping = true
       const max = (2 * Math.PI) / this.items.length
-      const _move = max / 50
+      const _move = max / 60
       let count = 0
       // this.fixedRadians()
-      let _radians = [...this.currentItemsRadian]
-
-      const that = this
+      // let _radians = [...this.currentItemsRadian]
+      // const that = this
 
       const move = () => {
         if (count >= max) {
@@ -812,15 +833,18 @@ export default {
       const cb = () => {
         this.tapSwiping = false
         setTimeout(() => {
-          this.paused = false
+          // 当连续点击停止后, 异步执行的时候, 可能又有另外的点击所以需要判断
+          if (!this.tapSwiping) this.paused = false
         }, 1000)
       }
       this.swipe(direction, cb)
     },
 
     autoSwipeFunction() {
+      if (this.autoSwipeInterval) return
       this.autoSwipeInterval = setInterval(() => {
-        if (this.autoSwipe && !this.paused && !this.modalShow) this.swipe(this.direction)
+        if (this.autoSwipe && !this.paused && !this.modalShow)
+          this.swipe(this.direction)
       }, this.autoSwipeSec * 1000)
     },
   },
