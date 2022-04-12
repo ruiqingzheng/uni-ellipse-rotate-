@@ -1,20 +1,20 @@
 <template>
   <view
     class="main"
-    @touchstart.native.stop="
+    @touchstart="
       (e) => {
         e.preventDefault()
         e.stopPropagation()
         mainTouchstart(e)
       }
     "
-    @touchmove.native.stop="(e) => debouncedMainTouchMove(e)"
-    @touchend.native.stop="(e) => mainTouchend(e)"
+    @touchmove="(e) => debouncedMainTouchMove(e)"
+    @touchend="(e) => mainTouchend(e)"
   >
     <view class="top">
       <view
         class="stage"
-        @click="
+        @tap="
           () => {
             showModal()
           }
@@ -73,11 +73,11 @@
       <view class="bottom-box-center">
         <view
           class="a-button left-button"
-          @tap.native.stop="debouncedTapButton('left')"
+          @tap="debouncedTapButton('left')"
         ></view>
         <view
           class="a-button right-button"
-          @tap.native.stop="
+          @tap="
             (e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -783,10 +783,23 @@ export default {
           this._onTouchMoveUpdateItemPosition()
         }
         count += _move
-        requestAnimationFrame(move)
+        // requestAnimationFrame(move)
+        requestAnimationFrameTimeout(move)
       }
 
-      requestAnimationFrame(move)
+      const requestAnimationFrameTimeout = (fn) => {
+        setTimeout(() => {
+          if (fn && typeof fn === "function") {
+            fn()
+          }
+        }, 16)
+      }
+
+      move()
+
+      requestAnimationFrameTimeout(move)
+
+      // requestAnimationFrame(move)
     },
 
     // 在自动swipe 的时候tap swipe 会导致有时候多移动一次
@@ -807,7 +820,7 @@ export default {
 
     autoSwipeFunction() {
       this.autoSwipeInterval = setInterval(() => {
-        if (this.autoSwipe && !this.paused) this.swipe(this.direction)
+        if (this.autoSwipe && !this.paused && !this.modalShow) this.swipe(this.direction)
       }, this.autoSwipeSec * 1000)
     },
   },
