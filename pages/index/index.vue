@@ -956,7 +956,7 @@ $radianLong: 500px;
         .item {
           position: absolute;
           width: 80px;
-          height: 80px;
+          height: 180px;
           z-index: 2;
           border: solid 1px $yellow-300;
           background-color: white;
@@ -983,7 +983,7 @@ $radianLong: 500px;
           font-size: 12px;
           font-weight: bold;
           width: 100px !important;
-          height: 110px !important;
+          height: 180px !important;
           transition-property: width, height;
           // transition-duration: $duration-long;
           // transform: scale(1.1);
